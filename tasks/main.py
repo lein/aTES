@@ -18,27 +18,19 @@ async def get_tasks():
     return await Task_Pydantic.from_queryset(Tasks.all())
 
 
-@app.post("/tasks", response_model=Task_Pydantic)
-async def create_task(task: TaskIn_Pydantic):
+@app.post("/add_task")
+async def add_task(task: TaskIn_Pydantic):
     task_obj = await Tasks.create(**task.dict(exclude_unset=True))
     return await Task_Pydantic.from_tortoise_orm(task_obj)
 
 
-@app.get(
-    "/task/{task_id}",
-    response_model=Task_Pydantic,
-    responses={404: {"model": HTTPNotFoundError}}
-)
-async def get_task(task_id: int):
-    return await Task_Pydantic.from_queryset_single(Tasks.get(id=task_id))
+@app.post("/shuffle_tasks")
+async def shuffle_tasks(task_id: int):
+    pass
 
 
-@app.put(
-    "/task/{task_id}",
-    response_model=Task_Pydantic,
-    responses={404: {"model": HTTPNotFoundError}}
-)
-async def update_task(task_id: int, task: TaskIn_Pydantic):
+@app.get("/get_tasks")
+async def get_tasks(task_id: int, task: TaskIn_Pydantic):
     await Tasks.filter(id=task_id).update(**task.dict(exclude_unset=True))
     return await Task_Pydantic.from_queryset_single(Tasks.get(id=task_id))
 
