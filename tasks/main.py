@@ -1,50 +1,60 @@
 import os
 from typing import List
-from fastapi import FastAPI, HTTPException
-from models import Task_Pydantic, TaskIn_Pydantic, Tasks
+
+import httpx
 from pydantic import BaseModel
-from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
+from fastapi import Depends, FastAPI, Form
+from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2AuthorizationCodeBearer
+from tortoise.contrib.fastapi import register_tortoise
+from models import Task_Pydantic, TaskIn_Pydantic, Tasks
 
 
 app = FastAPI(title="Tasks Service")
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="http://0.0.0.0:3000/oauth/authorize",
+    tokenUrl="/oauth/token", scopes={"tasks": "tasks"})
 
 
 class Status(BaseModel):
     message: str
 
 
-@app.get("/tasks", response_model=List[Task_Pydantic])
-async def get_tasks():
+@app.post("/oauth/token")
+async def token(
+    grant_type: str=Form(...), code: str=Form(...),
+    client_id: str=Form(...), client_secret: str=Form(...),
+    redirect_uri: str=Form(...)
+):
+    """Proxy method to oauth service for Swagger UI"""
+    args = {
+        "grant_type": grant_type,
+        "code": code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri
+    }
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            "http://0.0.0.0:3000/oauth/token",
+            headers={"content-type": "application/x-www-form-urlencoded"},
+            data=args)
+        return JSONResponse(content=r.json(), status_code=r.status_code)
+
+
+@app.get("/get_tasks", response_model=List[Task_Pydantic])
+async def get_tasks(token: str=Depends(oauth2_scheme)):
     return await Task_Pydantic.from_queryset(Tasks.all())
 
 
 @app.post("/add_task")
 async def add_task(task: TaskIn_Pydantic):
-    task_obj = await Tasks.create(**task.dict(exclude_unset=True))
-    return await Task_Pydantic.from_tortoise_orm(task_obj)
+    pass
 
 
 @app.post("/shuffle_tasks")
 async def shuffle_tasks(task_id: int):
     pass
-
-
-@app.get("/get_tasks")
-async def get_tasks(task_id: int, task: TaskIn_Pydantic):
-    await Tasks.filter(id=task_id).update(**task.dict(exclude_unset=True))
-    return await Task_Pydantic.from_queryset_single(Tasks.get(id=task_id))
-
-
-@app.delete(
-    "/task/{task_id}",
-    response_model=Status,
-    responses={404: {"model": HTTPNotFoundError}}
-)
-async def delete_task(task_id: int):
-    deleted_count = await Tasks.filter(id=task_id).delete()
-    if not deleted_count:
-        raise HTTPException(status_code=404, detail=f"User {task_id} not found")
-    return Status(message=f"Deleted task {task_id}")
 
 
 register_tortoise(

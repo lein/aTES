@@ -9,6 +9,8 @@ mypy = "*"
 tortoise-orm = "*"
 uvicorn = "*"
 asyncpg = "*"
+httpx = "*"
+python-multipart = "*"
 
 [dev-packages]
 
