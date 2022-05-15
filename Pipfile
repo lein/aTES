@@ -11,6 +11,7 @@ uvicorn = "*"
 asyncpg = "*"
 httpx = "*"
 python-multipart = "*"
+aiokafka = "*"
 
 [dev-packages]
 

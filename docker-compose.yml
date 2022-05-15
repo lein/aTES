@@ -75,6 +75,7 @@ services:
       - broker
     environment:
       DATABASE_URL: 'postgres://postgres:password@db:5432/postgres'
+      AUTH_URL: 'http://0.0.0.0:3000'
       KAFKA_URL: 'kafka://broker:29092'
     networks:
       - popug-jira
